@@ -8,6 +8,9 @@ from xml.etree import ElementTree as et
 
 TCD_NS = 'http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2'
 AX_NS = 'http://www.garmin.com/xmlschemas/ActivityExtension/v2'
+lastCadence = "0"
+lastPower = "0"
+lastHr = "0"
 
 
 def iso(dt):
@@ -28,6 +31,7 @@ def mywellness2tcx(in_file, out_file, start_dt):
     for sample in analitics['samples']:
         dt = start_dt + timedelta(seconds=sample['t'])
         values = dict(zip(fields, sample['vs']))
+        values['t'] =  sample['t']
         samples.append((dt, values))
 
     # Strip point at the end with no activity
@@ -69,7 +73,7 @@ def mywellness2tcx(in_file, out_file, start_dt):
 
     tcd = et.Element('TrainingCenterDatabase', xmlns=TCD_NS)
     activities = et.SubElement(tcd, 'Activities')
-    activity = et.SubElement(activities, 'Activity', Sport='Biking')
+    activity = et.SubElement(activities, 'Activity', Sport='Running')
     # Id field hase type xsd:dateTime!
     et.SubElement(activity, 'Id').text = iso(start_dt)
     lap = et.SubElement(activity, 'Lap', StartTime=iso(start_dt))
@@ -79,11 +83,28 @@ def mywellness2tcx(in_file, out_file, start_dt):
         point = et.SubElement(track, 'Trackpoint')
         et.SubElement(point, 'Time').text = iso(dt)
         et.SubElement(point, 'DistanceMeters').text = str(sample['SmoothDistance'])
-        et.SubElement(point, 'Cadence').text = str(sample['Rpm'])
+        if ('RunningCadence' in sample.keys()):
+            et.SubElement(point, 'Cadence').text = str(sample['RunningCadence'])
+            lastCadence = str(sample['RunningCadence'])
+        else:
+            et.SubElement(point, 'Cadence').text = lastCadence
         extensions = et.SubElement(point, 'Extensions')
         tpx = et.SubElement(extensions, 'TPX', xmlns=AX_NS)
         et.SubElement(tpx, 'Speed').text = str(sample['Speed'] / 3.6)
-        et.SubElement(tpx, 'Watts').text = str(sample['Power'])
+        if ('RunningPower' in sample.keys()):
+            et.SubElement(tpx, 'Watts').text = str(sample['RunningPower'])
+            lastPower = str(sample['RunningPower'])
+        else: 
+            et.SubElement(tpx, 'Watts').text = lastPower
+        if ('hr' in analitics.keys()):
+            #print('searching hr for timeindex: ' + str(sample['t']))
+            for hr in analitics['hr']:
+                if (int(sample['t']) <= int(hr['t'])):
+                    lastHr = str(hr['hr'])
+                    break
+            #print ('Adding HR: '+ lastHr)
+            hr = et.SubElement(point, 'HeartRateBpm')
+            et.SubElement(hr, 'Value').text = lastHr
 
     doc = et.ElementTree(tcd)
 
