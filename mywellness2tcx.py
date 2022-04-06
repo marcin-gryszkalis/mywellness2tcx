@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 from datetime import datetime, timedelta
 import json
@@ -16,12 +17,14 @@ def iso(dt):
     return dt.strftime('%Y-%m-%dT%H:%M:%SZ')
 
 
-def mywellness2tcx(in_file, out_file, start_dt):
+def mywellness2tcx(in_file, out_file, start_dt, initialAltitude):
     lastCadence = "0"
     lastPower = "0"
     lastHr = "0"
-    lastAltitude = "0.0"
+    lastAltitude = str(initialAltitude)
     lastDistance = "0"
+    inclinePercent = "0"
+    inclineDegrees = "0"
     
     with open(in_file) as fp:
         data = json.load(fp)
@@ -83,14 +86,19 @@ def mywellness2tcx(in_file, out_file, start_dt):
     track = et.SubElement(lap, 'Track')
 
     for dt, sample in samples:
+        inclinePercent = 0
+        inclineDegrees = 0
         point = et.SubElement(track, 'Trackpoint')
         et.SubElement(point, 'Time').text = iso(dt)
         et.SubElement(point, 'DistanceMeters').text = str(sample['SmoothDistance'])
         if ('Grade' in sample.keys()):
+            inclinePercent = float(sample['Grade'])
+            inclineDegrees = math.degrees(math.atan(inclinePercent/100))
             distanceDifference = (float(sample['SmoothDistance']) - float(lastDistance))
             lastDistance = sample['SmoothDistance']
-            lastAltitude = str(float(lastAltitude) + (distanceDifference * math.sin(int(sample['Grade'])) / math.sin(90)))
-            et.SubElement(point, 'AltitudeMeters').text = lastAltitude
+            lastAltitude = str(float(lastAltitude) + ((distanceDifference * math.sin(math.radians(inclineDegrees))) / math.sin(math.radians(90))))
+            #print(str(round(distanceDifference, 2)) + ' * sin(' + str(round(inclineDegrees, 2)) + ') / sin(90)) = ' + str(distanceDifference * math.sin(math.radians(inclineDegrees)) / math.sin(math.radians(90))))
+        et.SubElement(point, 'AltitudeMeters').text = lastAltitude
         if ('RunningCadence' in sample.keys()):
             et.SubElement(point, 'Cadence').text = str(sample['RunningCadence'])
             lastCadence = str(sample['RunningCadence'])
@@ -111,11 +119,13 @@ def mywellness2tcx(in_file, out_file, start_dt):
                     break
             hr = et.SubElement(point, 'HeartRateBpm')
             et.SubElement(hr, 'Value').text = lastHr
+            print('New Waypoint: ➡️  ' + str(round(float(distanceDifference),2)) + 'm \t ↗️  '+ str(round(float(inclinePercent),2)) + '% (' + str(round(float(inclineDegrees), 2)) + '°) \t ⬆️  ' + str(round(float(lastAltitude), 2)) + 'm \t 🏎  ' + str(round(sample['Speed'] / 3.6, 2)) + ' m/s \t 💪🏼  ' + str(round(float(lastPower), 0)) + ' Watts \t ♥️  ' + str(lastHr) + 'bpm')
 
     doc = et.ElementTree(tcd)
-
+    print ('Final Altitude was: ' + str(round(float(lastAltitude), 2)))
     with open(out_file, 'wb') as out_fp:
         doc.write(out_fp, encoding='ascii', xml_declaration=True)
+        print('Output file written.')
 
 
 if __name__ == '__main__':
@@ -128,5 +138,13 @@ if __name__ == '__main__':
 
     # There is no time in JSON and date is in localized format only
     start_dt = datetime.strptime(sys.argv[2], '%Y-%m-%dT%H:%M')
-
-    mywellness2tcx(in_file, out_file, start_dt)
+    
+    # If provided, we'll pass on initial altitude (in meters) to the calculation.
+    initialAltitude = 0.0
+    try: 
+        if(sys.argv[3]):
+            initialAltitude = float(sys.argv[3])
+    except IndexError:
+        print('No initial Altitude given, starting with 0')
+        
+    mywellness2tcx(in_file, out_file, start_dt, initialAltitude)
