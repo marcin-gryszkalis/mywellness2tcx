@@ -1,6 +1,6 @@
 # Convert treadmill activity from MyWellness JSON format to TCX
 
-`mywellness2tcx.py` script converts treadmill acivity data including HR in MyWellness JSON format to TCX suitable to import to Strava, Trainingpeaks, etc., and its sole reason for existing is because technogym is incapable of creating anything useful but hardware.
+`mywellness2tcx.py` script converts treadmill acivity data including HR and Elevation/Altitude in MyWellness JSON format to TCX suitable to import to Strava, Trainingpeaks, etc., and its sole reason for existing is because technogym is incapable of creating anything useful but hardware.
 If you need to convert files from a technogym bike, please go to the original [project](https://github.com/ods/mywellness2tcx)
 
 ## Usage
