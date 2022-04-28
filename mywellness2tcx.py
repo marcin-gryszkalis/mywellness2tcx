@@ -119,7 +119,7 @@ def mywellness2tcx(in_file, out_file, start_dt, initialAltitude):
                     break
             hr = et.SubElement(point, 'HeartRateBpm')
             et.SubElement(hr, 'Value').text = lastHr
-            print('New Waypoint: ➡️  ' + str(round(float(distanceDifference),2)) + 'm \t ↗️  '+ str(round(float(inclinePercent),2)) + '% (' + str(round(float(inclineDegrees), 2)) + '°) \t ⬆️  ' + str(round(float(lastAltitude), 2)) + 'm \t 🏎  ' + str(round(sample['Speed'] / 3.6, 2)) + ' m/s \t 💪🏼  ' + str(round(float(lastPower), 0)) + ' Watts \t ♥️  ' + str(lastHr) + 'bpm')
+            print('New Waypoint: ➡️  ' + str(format('%05.2F' % round(float(distanceDifference),2))) + 'm \t ↗️  '+ str(format('%04.1F' % round(float(inclinePercent),2))) + '% (' + str(format('%04.1F' % round(float(inclineDegrees), 2))) + '°) \t ⬆️  ' + str(format('%04.1F' % round(float(lastAltitude), 2))) + 'm \t 🏎  ' + str(format('%04.1F' % round(sample['Speed'] / 3.6, 2))) + ' m/s \t 💪🏼  ' + str(format('%04.0F' % round(float(lastPower), 0))) + ' Watts \t ♥️  ' + str(lastHr) + 'bpm')
 
     doc = et.ElementTree(tcd)
     print ('Final Altitude was: ' + str(round(float(lastAltitude), 2)))
