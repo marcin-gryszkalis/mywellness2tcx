@@ -28,13 +28,17 @@ def mywellness2tcx(in_file, out_file, start_dt, initialAltitude):
     
     with open(in_file) as fp:
         data = json.load(fp)
-
-    analitics = data['data']['analitics']
-    fields = [
-        descriptor['pr']['name']
-        for descriptor in analitics['descriptor']
-    ]
-
+    
+    try:
+        analitics = data['data']['analitics']
+        fields = [
+            descriptor['pr']['name']
+            for descriptor in analitics['descriptor']
+        ]
+    except:
+        print('No Data Points found. Please make sure you use the JSON from the dev tools instead of the download from mywellness.com')
+        sys.exit(1)
+        
     samples = []
     for sample in analitics['samples']:
         dt = start_dt + timedelta(seconds=sample['t'])
