@@ -19,16 +19,17 @@ def iso(dt):
 
 def mywellness2tcx(in_file, out_file, start_dt, initialAltitude):
     lastCadence = "0"
+    lastRpm = "0"
     lastPower = "0"
     lastHr = "0"
     lastAltitude = str(initialAltitude)
     lastDistance = "0"
     inclinePercent = "0"
     inclineDegrees = "0"
-    
+
     with open(in_file) as fp:
         data = json.load(fp)
-    
+
     try:
         analitics = data['data']['analitics']
         fields = [
@@ -38,7 +39,12 @@ def mywellness2tcx(in_file, out_file, start_dt, initialAltitude):
     except:
         print('No Data Points found. Please make sure you use the JSON from the dev tools instead of the download from mywellness.com')
         sys.exit(1)
-        
+
+
+    sport = 'Running'
+    if data['data']['physicalActivityName'] == 'Group Cycle':
+        sport = 'Biking'
+
     samples = []
     for sample in analitics['samples']:
         dt = start_dt + timedelta(seconds=sample['t'])
@@ -83,7 +89,7 @@ def mywellness2tcx(in_file, out_file, start_dt, initialAltitude):
     # Dump the activity into XML
     tcd = et.Element('TrainingCenterDatabase', xmlns=TCD_NS)
     activities = et.SubElement(tcd, 'Activities')
-    activity = et.SubElement(activities, 'Activity', Sport='Running')
+    activity = et.SubElement(activities, 'Activity', Sport=sport)
     # Id field hase type xsd:dateTime!
     et.SubElement(activity, 'Id').text = iso(start_dt)
     lap = et.SubElement(activity, 'Lap', StartTime=iso(start_dt))
@@ -95,11 +101,11 @@ def mywellness2tcx(in_file, out_file, start_dt, initialAltitude):
         point = et.SubElement(track, 'Trackpoint')
         et.SubElement(point, 'Time').text = iso(dt)
         et.SubElement(point, 'DistanceMeters').text = str(sample['SmoothDistance'])
+        distanceDifference = (float(sample['SmoothDistance']) - float(lastDistance))
+        lastDistance = sample['SmoothDistance']
         if ('Grade' in sample.keys()):
             inclinePercent = float(sample['Grade'])
             inclineDegrees = math.degrees(math.atan(inclinePercent/100))
-            distanceDifference = (float(sample['SmoothDistance']) - float(lastDistance))
-            lastDistance = sample['SmoothDistance']
             lastAltitude = str(float(lastAltitude) + ((distanceDifference * math.sin(math.radians(inclineDegrees))) / math.sin(math.radians(90))))
             #print(str(round(distanceDifference, 2)) + ' * sin(' + str(round(inclineDegrees, 2)) + ') / sin(90)) = ' + str(distanceDifference * math.sin(math.radians(inclineDegrees)) / math.sin(math.radians(90))))
         et.SubElement(point, 'AltitudeMeters').text = lastAltitude
@@ -108,13 +114,21 @@ def mywellness2tcx(in_file, out_file, start_dt, initialAltitude):
             lastCadence = str(sample['RunningCadence'])
         else:
             et.SubElement(point, 'Cadence').text = lastCadence
+        if ('Rpm' in sample.keys()):
+            et.SubElement(point, 'Cadence').text = str(sample['Rpm'])
+            lastCadence = str(sample['Rpm'])
+        else:
+            et.SubElement(point, 'Cadence').text = lastCadence
         extensions = et.SubElement(point, 'Extensions')
         tpx = et.SubElement(extensions, 'TPX', xmlns=AX_NS)
         et.SubElement(tpx, 'Speed').text = str(sample['Speed'] / 3.6)
         if ('RunningPower' in sample.keys()):
             et.SubElement(tpx, 'Watts').text = str(sample['RunningPower'])
             lastPower = str(sample['RunningPower'])
-        else: 
+        elif ('Power' in sample.keys()):
+            et.SubElement(tpx, 'Watts').text = str(sample['Power'])
+            lastPower = str(sample['Power'])
+        else:
             et.SubElement(tpx, 'Watts').text = lastPower
         if ('hr' in analitics.keys()):
             for hr in analitics['hr']:
@@ -142,13 +156,13 @@ if __name__ == '__main__':
 
     # There is no time in JSON and date is in localized format only
     start_dt = datetime.strptime(sys.argv[2], '%Y-%m-%dT%H:%M')
-    
+
     # If provided, we'll pass on initial altitude (in meters) to the calculation.
     initialAltitude = 0.0
-    try: 
+    try:
         if(sys.argv[3]):
             initialAltitude = float(sys.argv[3])
     except IndexError:
         print('No initial Altitude given, starting with 0')
-        
+
     mywellness2tcx(in_file, out_file, start_dt, initialAltitude)
