@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import json
 import sys
 import math
+import re
 from xml.etree import ElementTree as et
 
 
@@ -42,7 +43,7 @@ def mywellness2tcx(in_file, out_file, start_dt, initialAltitude):
 
 
     sport = 'Running'
-    if data['data']['physicalActivityName'] == 'Group Cycle':
+    if re.search(r'(?i)bike', data['data']['equipmentType']):
         sport = 'Biking'
 
     samples = []
