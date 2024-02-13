@@ -43,6 +43,7 @@ for my $i ($mini..$maxi)
 
     printf "%4d $d ($n) aaid=$aaid fid=$fid apid=$apid\n", $i;
 
-    open(my $f, ">", "mywellness-$d-$i.json") or die $!;
+    my $fn = sprintf "mywellness-%05d-%s.json", $i, $d;
+    open(my $f, ">", $fn) or die $!;
     print $f $log;
 }
