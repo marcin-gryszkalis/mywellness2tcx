@@ -5,9 +5,6 @@ use feature qw/state signatures say multidimensional/;
 use utf8;
 use open qw(:std :encoding(UTF-8));
 
-use File::Slurp;
-use Data::Dumper;
-
 # after downloading you can run (assuming you don't really care about starting hour, here I set it to 19:00 UTC)
 # ls mywellness*json | perl -nle '$d = (s/.*(\d\d\d\d-\d\d-\d\d).*/$1T19:00/r); print `python mywellness2tcx.py "$_" "$d"`'
 
@@ -46,5 +43,6 @@ for my $i ($mini..$maxi)
 
     printf "%4d $d ($n) aaid=$aaid fid=$fid apid=$apid\n", $i;
 
-    write_file("mywellness-$d-$i.json", $log);
+    open(my $f, ">", "mywellness-$d-$i.json") or die $!;
+    print $f $log;
 }
