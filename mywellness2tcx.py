@@ -18,9 +18,10 @@ def iso(dt):
     return dt.strftime('%Y-%m-%dT%H:%M:%SZ')
 
 # altitude simulation for simple indoor bicycle with manual setting of resistance, measured 1-20
-# exponential, -1% for level 0, 0% for level 6, 10% for level 20 (max)
+# negative for level 5 and below, 0% for level 6, 10% for level 20 (max)
 def level2grade(l):
-    return round(1.1330 ** l - 2, 2)
+    # return round(1.1330 ** l - 2, 2) -- exponential is too flat
+    return math.tan(l/7.35 - 4.52) * 2 + 1.3
 
 def mywellness2tcx(in_file, out_file, start_dt, initialAltitude):
     lastCadence = "0"
