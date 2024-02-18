@@ -17,6 +17,10 @@ AX_NS = 'http://www.garmin.com/xmlschemas/ActivityExtension/v2'
 def iso(dt):
     return dt.strftime('%Y-%m-%dT%H:%M:%SZ')
 
+# altitude simulation for simple indoor bicycle with manual setting of resistance, measured 1-20
+# exponential, -1% for level 0, 0% for level 6, 10% for level 20 (max)
+def level2grade(l):
+    return round(1.1330 ** l - 2, 2)
 
 def mywellness2tcx(in_file, out_file, start_dt, initialAltitude):
     lastCadence = "0"
@@ -96,6 +100,7 @@ def mywellness2tcx(in_file, out_file, start_dt, initialAltitude):
     lap = et.SubElement(activity, 'Lap', StartTime=iso(start_dt))
     track = et.SubElement(lap, 'Track')
 
+    gradientSum = 0
     for dt, sample in samples:
         inclinePercent = 0
         inclineDegrees = 0
@@ -109,6 +114,10 @@ def mywellness2tcx(in_file, out_file, start_dt, initialAltitude):
             inclineDegrees = math.degrees(math.atan(inclinePercent/100))
             lastAltitude = str(float(lastAltitude) + ((distanceDifference * math.sin(math.radians(inclineDegrees))) / math.sin(math.radians(90))))
             #print(str(round(distanceDifference, 2)) + ' * sin(' + str(round(inclineDegrees, 2)) + ') / sin(90)) = ' + str(distanceDifference * math.sin(math.radians(inclineDegrees)) / math.sin(math.radians(90))))
+        if ('Level' in sample.keys()):
+            inclinePercent = level2grade(int(sample['Level']))
+            inclineDegrees = math.degrees(math.atan(inclinePercent/100))
+            lastAltitude = str(float(lastAltitude) + ((distanceDifference * math.sin(math.radians(inclineDegrees))) / math.sin(math.radians(90))))
         et.SubElement(point, 'AltitudeMeters').text = lastAltitude
         if ('RunningCadence' in sample.keys()):
             et.SubElement(point, 'Cadence').text = str(sample['RunningCadence'])
@@ -139,9 +148,11 @@ def mywellness2tcx(in_file, out_file, start_dt, initialAltitude):
             hr = et.SubElement(point, 'HeartRateBpm')
             et.SubElement(hr, 'Value').text = lastHr
             print('New Waypoint: ➡️  ' + str(format('%05.2F' % round(float(distanceDifference),2))) + 'm \t ↗️  '+ str(format('%04.1F' % round(float(inclinePercent),2))) + '% (' + str(format('%04.1F' % round(float(inclineDegrees), 2))) + '°) \t ⬆️  ' + str(format('%04.1F' % round(float(lastAltitude), 2))) + 'm \t 🏎  ' + str(format('%04.1F' % round(sample['Speed'] / 3.6, 2))) + ' m/s \t 💪🏼  ' + str(format('%04.0F' % round(float(lastPower), 0))) + ' Watts \t ♥️  ' + str(lastHr) + 'bpm')
+            gradientSum += round(float(distanceDifference),2) * round(float(inclinePercent),2)
 
     doc = et.ElementTree(tcd)
-    print ('Final Altitude was: ' + str(round(float(lastAltitude), 2)))
+    print('Final Altitude was: ' + str(round(float(lastAltitude), 2)))
+    print('Average gradient: ' + str(round(gradientSum / dist,2)) + "%")
     with open(out_file, 'wb') as out_fp:
         doc.write(out_fp, encoding='ascii', xml_declaration=True)
         print('Output file written.')
