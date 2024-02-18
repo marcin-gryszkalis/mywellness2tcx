@@ -12,8 +12,6 @@ from xml.etree import ElementTree as et
 TCD_NS = 'http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2'
 AX_NS = 'http://www.garmin.com/xmlschemas/ActivityExtension/v2'
 
-
-
 def iso(dt):
     return dt.strftime('%Y-%m-%dT%H:%M:%SZ')
 
@@ -158,14 +156,14 @@ def mywellness2tcx(in_file, out_file, start_dt, initialAltitude):
         doc.write(out_fp, encoding='ascii', xml_declaration=True)
         print('Output file written.')
 
-
 if __name__ == '__main__':
+
+    if len(sys.argv) < 3:
+        print("Usage: mywellness2tcx.py mywellness-workout-details.json start-time(yyyy-mm-ddThh:mm) [altitude]")
+        exit(1)
+
     in_file = sys.argv[1]
-    base_name = (
-        in_file[:-5] if in_file.lower().endswith('.json')
-        else in_file
-    )
-    out_file = base_name + '.tcx'
+    out_file = re.sub('(\.json$)?$', '.tcx', in_file, 1)
 
     # There is no time in JSON and date is in localized format only
     start_dt = datetime.strptime(sys.argv[2], '%Y-%m-%dT%H:%M')
@@ -173,7 +171,7 @@ if __name__ == '__main__':
     # If provided, we'll pass on initial altitude (in meters) to the calculation.
     initialAltitude = 0.0
     try:
-        if(sys.argv[3]):
+        if (sys.argv[3]):
             initialAltitude = float(sys.argv[3])
     except IndexError:
         print('No initial Altitude given, starting with 0')
